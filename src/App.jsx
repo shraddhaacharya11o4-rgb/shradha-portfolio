@@ -1,12 +1,12 @@
 import './App.css'
 import { useEffect, useRef, useState } from 'react'
 
-const links = ['Home', 'About', 'Skills', 'Certifications', 'Projects', 'Education', 'Contact']
+const links = ['Home', 'About', 'Certifications', 'Projects', 'Education', 'Contact']
 
 const roles = [
   'MCA student and aspiring software developer.',
-  'Builder of practical Python & Django apps.',
-  'Always learning, always shipping.',
+  'Turning ideas into real Python & Django applications.',
+  'Growing my skills, one project at a time.',
 ]
 
 const stats = [
@@ -17,7 +17,7 @@ const stats = [
 ]
 
 // Edit this to whatever you're actually studying right now.
-const currentlyLearning = ['Data Structures & Algorithms', 'System Design']
+const currentlyLearning = ['DSA', 'Software Development', 'Web Development']
 
 const skills = [
   ['Programming', 'Languages I learned and used across my degree.', ['Python', 'C', 'Java']],
@@ -209,6 +209,51 @@ function useCustomCursor() {
   }, [])
 }
 
+// Drifting, twinkling starfield drawn on a canvas — the backdrop for 3D mode.
+function useStarfield(canvasRef, active) {
+  useEffect(() => {
+    if (!active) return
+    const canvas = canvasRef.current
+    if (!canvas) return
+    const ctx = canvas.getContext('2d')
+    let w, h, raf
+    const resize = () => {
+      w = canvas.width = canvas.offsetWidth
+      h = canvas.height = canvas.offsetHeight
+    }
+    resize()
+    window.addEventListener('resize', resize)
+    const still = reducedMotion()
+    const count = still ? 70 : 150
+    const stars = Array.from({ length: count }, () => ({
+      x: Math.random() * w,
+      y: Math.random() * h,
+      z: Math.random() * 1 + 0.3,
+      twinkle: Math.random() * Math.PI * 2,
+    }))
+    const draw = (t) => {
+      ctx.clearRect(0, 0, w, h)
+      stars.forEach((s) => {
+        const alpha = 0.35 + 0.65 * Math.abs(Math.sin(s.twinkle + t / 900))
+        ctx.beginPath()
+        ctx.fillStyle = `rgba(196, 181, 253, ${alpha})`
+        ctx.arc(s.x, s.y, s.z * 1.6, 0, Math.PI * 2)
+        ctx.fill()
+        if (!still) {
+          s.y += s.z * 0.15
+          if (s.y > h) { s.y = 0; s.x = Math.random() * w }
+        }
+      })
+      raf = requestAnimationFrame(draw)
+    }
+    raf = requestAnimationFrame(draw)
+    return () => {
+      cancelAnimationFrame(raf)
+      window.removeEventListener('resize', resize)
+    }
+  }, [active, canvasRef])
+}
+
 const isNumeric = (v) => /^[\d.]+$/.test(v)
 
 function StatCard({ value, label, index }) {
@@ -281,11 +326,18 @@ function tilt(e) {
 }
 function resetTilt(e) { e.currentTarget.style.transform = '' }
 
+// Every node floating in the 3D universe: projects, skills, and certificates.
+const sceneNodes = [
+  ...projects.map((p) => ({ key: p.name, label: p.name, icon: '◆', type: 'project', data: p })),
+  ...skills.map(([title, text, items]) => ({ key: title, label: title, icon: '▲', type: 'skill', data: { title, text, items } })),
+  ...certifications.map((c) => ({ key: c.name, label: c.name.split(' ').slice(0, 3).join(' '), icon: '✦', type: 'cert', data: c })),
+]
+
 function App() {
   const [menuOpen, setMenuOpen] = useState(false)
   const [activeProject, setActiveProject] = useState(null)
   const [activeCert, setActiveCert] = useState(null)
-  const [form, setForm] = useState({ name: '', email: '', message: '' })
+  const [activeSkill, setActiveSkill] = useState(null)
   const [theme, setTheme] = useTheme()
   const progress = useScrollProgress()
   const activeSection = useScrollSpy(links.map((l) => l.toLowerCase()))
@@ -293,11 +345,83 @@ function App() {
   useScrollReveal()
   useCustomCursor()
 
-  const handleSubmit = (e) => {
-    e.preventDefault()
-    const subject = encodeURIComponent(`Portfolio message from ${form.name || 'a visitor'}`)
-    const body = encodeURIComponent(`${form.message}\n\n— ${form.name} (${form.email})`)
-    window.location.href = `mailto:shraddhaacharya11@gmail.com?subject=${subject}&body=${body}`
+  // --- 3D universe ---
+  const [is3D, setIs3D] = useState(false)
+  const [angle, setAngle] = useState(0)
+  const [focusedKey, setFocusedKey] = useState(null)
+  const canvasRef = useRef(null)
+  const angleRef = useRef(0)
+  const drag = useRef({ dragging: false, startX: 0, startAngle: 0, moved: false })
+  useStarfield(canvasRef, is3D)
+
+  useEffect(() => { angleRef.current = angle }, [angle])
+
+  useEffect(() => {
+    document.body.style.overflow = is3D ? 'hidden' : ''
+    if (!is3D) setFocusedKey(null)
+    return () => { document.body.style.overflow = '' }
+  }, [is3D])
+
+  useEffect(() => {
+    if (!is3D || reducedMotion()) return
+    let raf
+    const spin = () => {
+      if (!drag.current.dragging) setAngle((a) => a + 0.08)
+      raf = requestAnimationFrame(spin)
+    }
+    raf = requestAnimationFrame(spin)
+    return () => cancelAnimationFrame(raf)
+  }, [is3D])
+
+  useEffect(() => {
+    if (!is3D) return
+    const onKey = (e) => { if (e.key === 'Escape') setIs3D(false) }
+    window.addEventListener('keydown', onKey)
+    return () => window.removeEventListener('keydown', onKey)
+  }, [is3D])
+
+  const onRingPointerDown = (e) => {
+    drag.current = { dragging: true, startX: e.clientX, startAngle: angle, moved: false }
+    e.currentTarget.setPointerCapture(e.pointerId)
+  }
+  const onRingPointerMove = (e) => {
+    if (!drag.current.dragging) return
+    const delta = e.clientX - drag.current.startX
+    if (Math.abs(delta) > 5) drag.current.moved = true
+    setAngle(drag.current.startAngle + delta * 0.3)
+  }
+  const onRingPointerUp = () => { drag.current.dragging = false }
+
+  const openNode = (node) => {
+    if (drag.current.moved) { drag.current.moved = false; return }
+    setIs3D(false)
+    if (node.type === 'project') setActiveProject(node.data)
+    else if (node.type === 'skill') setActiveSkill(node.data)
+    else setActiveCert(node.data)
+  }
+
+  // Smoothly spins the ring to bring a node to the front — the side menu's "scroll".
+  const animateAngleTo = (target) => {
+    const startAngle = angleRef.current
+    const diff = ((target - startAngle + 180) % 360 + 360) % 360 - 180
+    const duration = 550
+    const start = performance.now()
+    drag.current.dragging = true
+    const tick = (now) => {
+      const t = Math.min((now - start) / duration, 1)
+      const eased = 1 - Math.pow(1 - t, 3)
+      setAngle(startAngle + diff * eased)
+      if (t < 1) requestAnimationFrame(tick)
+      else drag.current.dragging = false
+    }
+    requestAnimationFrame(tick)
+  }
+
+  const focusNode = (node, i) => {
+    if (focusedKey === node.key) { openNode(node); return }
+    const nodeAngle = (360 / sceneNodes.length) * i
+    setFocusedKey(node.key)
+    animateAngleTo(-nodeAngle)
   }
 
   return (
@@ -360,6 +484,10 @@ function App() {
         <section id="home" className="hero-section">
           <div className="container hero-container">
             <div className="hero-content reveal">
+              <div className="profile-photo-wrap">
+                {/* Add your photo at /public/profile.jpg — this circle will pick it up automatically. */}
+                <img src="/profile.jpeg" alt="Shradha Acharya" className="profile-photo" />
+              </div>
               <p className="hero-status"><i></i> Pursuing MCA at New Horizon College of Engineering</p>
               <h1 className="gradient-text">Shradha Acharya</h1>
               <h2 className="typewriter">
@@ -379,12 +507,12 @@ function App() {
                 <a href="#projects" className="primary-button" onMouseMove={magnetic} onMouseLeave={resetMagnetic}>
                   View my projects
                 </a>
-                <a href="#contact" className="secondary-button" onMouseMove={magnetic} onMouseLeave={resetMagnetic}>
-                  Get in touch
-                </a>
                 <a href="/resume.pdf" target="_blank" rel="noreferrer" className="ghost-button" onMouseMove={magnetic} onMouseLeave={resetMagnetic}>
                   View resume ↗
                 </a>
+                <button className="enter3d-button" onClick={() => setIs3D(true)} onMouseMove={magnetic} onMouseLeave={resetMagnetic}>
+                  ✦ Enter 3D mode
+                </button>
               </div>
             </div>
 
@@ -396,14 +524,13 @@ function App() {
                 </div>
                 <pre className="code-content">
                   <code>
-                    <span className="c-k">def</span> <span className="c-f">build</span>():{'\n'}
-                    {'    '}project = <span className="c-s">"CivicWatch"</span>{'\n'}
-                    {'    '}skills = [{'\n'}
-                    {'        '}<span className="c-s">"Python"</span>,{'\n'}
-                    {'        '}<span className="c-s">"Django"</span>,{'\n'}
-                    {'        '}<span className="c-s">"SQL"</span>{'\n'}
-                    {'    '}]{'\n'}
-                    {'    '}<span className="c-k">return</span> <span className="c-s">"building..."</span>
+                    <span className="c-c"># Hi, I'm Shradha — here's a quick summary</span>{'\n'}
+                    <span className="c-k">def</span> <span className="c-f">shradha</span>():{'\n'}
+                    {'    '}role = <span className="c-s">"MCA Student & Full-Stack Developer"</span>{'\n'}
+                    {'    '}stack = [<span className="c-s">"Python"</span>, <span className="c-s">"Django"</span>, <span className="c-s">"Flask"</span>, <span className="c-s">"SQL"</span>]{'\n'}
+                    {'    '}projects = [<span className="c-s">"CivicWatch"</span>, <span className="c-s">"AutoBilling"</span>]{'\n'}
+                    {'    '}status = <span className="c-s">"Open to internships"</span>{'\n'}
+                    {'    '}<span className="c-k">return</span> f<span className="c-s">"{'{role}'} — {'{status}'}"</span>
                     <span className="cursor-blink">▌</span>
                   </code>
                 </pre>
@@ -565,52 +692,18 @@ function App() {
                   I'm open to internships, meaningful projects and conversations about
                   software development.
                 </p>
-                <div className="contact-links">
-                  <a href="mailto:shraddhaacharya11@gmail.com">
-                    <span>Email</span><strong>shraddhaacharya11@gmail.com ↗</strong>
-                  </a>
-                  <a href="https://www.linkedin.com/in/shradha-acharya-049982391/" target="_blank" rel="noreferrer">
-                    <span>LinkedIn</span><strong>Connect with me ↗</strong>
-                  </a>
-                  <a href="https://github.com/shraddhaacharya11o4-rgb" target="_blank" rel="noreferrer">
-                    <span>GitHub</span><strong>View my repositories ↗</strong>
-                  </a>
-                </div>
               </div>
-
-              <form className="contact-form" onSubmit={handleSubmit}>
-                <label>
-                  Name
-                  <input
-                    type="text"
-                    required
-                    value={form.name}
-                    onChange={(e) => setForm({ ...form, name: e.target.value })}
-                  />
-                </label>
-                <label>
-                  Email
-                  <input
-                    type="email"
-                    required
-                    value={form.email}
-                    onChange={(e) => setForm({ ...form, email: e.target.value })}
-                  />
-                </label>
-                <label>
-                  Message
-                  <textarea
-                    rows="4"
-                    required
-                    value={form.message}
-                    onChange={(e) => setForm({ ...form, message: e.target.value })}
-                  />
-                </label>
-                <button type="submit" className="primary-button" onMouseMove={magnetic} onMouseLeave={resetMagnetic}>
-                  Send message
-                </button>
-                <p className="form-note">Opens your email app with this filled in.</p>
-              </form>
+              <div className="contact-links">
+                <a href="mailto:shraddhaacharya11@gmail.com">
+                  <span>Email</span><strong>shraddhaacharya11@gmail.com ↗</strong>
+                </a>
+                <a href="https://www.linkedin.com/in/shradha-acharya-049982391/" target="_blank" rel="noreferrer">
+                  <span>LinkedIn</span><strong>Connect with me ↗</strong>
+                </a>
+                <a href="https://github.com/shraddhaacharya11o4-rgb" target="_blank" rel="noreferrer">
+                  <span>GitHub</span><strong>View my repositories ↗</strong>
+                </a>
+              </div>
             </div>
           </div>
         </section>
@@ -649,6 +742,83 @@ function App() {
             <a href={activeCert.file} download className="primary-button">
               Download certificate ↓
             </a>
+          </div>
+        </div>
+      )}
+
+      {activeSkill && (
+        <div className="modal-backdrop" onClick={() => setActiveSkill(null)}>
+          <div className="modal" onClick={(e) => e.stopPropagation()}>
+            <button className="modal-close" onClick={() => setActiveSkill(null)} aria-label="Close">✕</button>
+            <h3>{activeSkill.title}</h3>
+            <p>{activeSkill.text}</p>
+            <div className="chips">
+              {activeSkill.items.map((s) => <span key={s}>{s}</span>)}
+            </div>
+          </div>
+        </div>
+      )}
+
+      {is3D && (
+        <div className="scene3d-overlay">
+          <canvas ref={canvasRef} className="scene3d-canvas"></canvas>
+
+          <div className="orbit-ring orbit-1" aria-hidden="true"></div>
+          <div className="orbit-ring orbit-2" aria-hidden="true"></div>
+
+          <div className="scene-center" aria-hidden="true">
+            <div className="scene-avatar-ring">
+              <img src="/profile.jpeg" alt="" className="scene-avatar" />
+            </div>
+          </div>
+
+          <button className="scene3d-exit" onClick={() => setIs3D(false)} aria-label="Exit 3D mode">✕ Exit</button>
+          <p className="scene3d-title">Shradha Acharya.</p>
+          <p className="scene3d-hint">Drag to look around · Use the menu to jump to a node · Esc to exit</p>
+
+          <nav className="scene-menu" aria-label="3D portfolio menu">
+            {sceneNodes.map((node, i) => (
+              <button
+                key={node.key}
+                type="button"
+                className={`scene-menu-item${focusedKey === node.key ? ' focused' : ''}`}
+                onClick={() => focusNode(node, i)}
+              >
+                <span className="node-icon-small">{node.icon}</span>
+                <span>{node.label}</span>
+              </button>
+            ))}
+          </nav>
+
+          <div
+            className="carousel3d-stage"
+            onPointerDown={onRingPointerDown}
+            onPointerMove={onRingPointerMove}
+            onPointerUp={onRingPointerUp}
+            onPointerLeave={onRingPointerUp}
+          >
+            <div className="carousel3d" style={{ transform: `rotateY(${angle}deg)` }}>
+              {sceneNodes.map((node, i) => {
+                const nodeAngle = (360 / sceneNodes.length) * i
+                return (
+                  <div
+                    key={node.key}
+                    className="carousel-node-wrap"
+                    style={{ transform: `rotateY(${nodeAngle}deg) translateZ(260px)` }}
+                  >
+                    <button
+                      type="button"
+                      className={`carousel-node ${node.type}${focusedKey === node.key ? ' focused' : ''}`}
+                      style={{ transform: `rotateY(${-angle - nodeAngle}deg)` }}
+                      onClick={() => openNode(node)}
+                    >
+                      <span className="node-icon">{node.icon}</span>
+                      <span className="node-label">{node.label}</span>
+                    </button>
+                  </div>
+                )
+              })}
+            </div>
           </div>
         </div>
       )}
