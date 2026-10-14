@@ -47,6 +47,7 @@ const projects = [
 ]
 
 const certifications = [
+  { name: 'Machine Learning', issuer: 'IBM SkillsBuild', year: '2026', file: '/certificates/Machine_learning.pdf' },
   { name: 'Python Full Stack (Django) and Web Design (HTML, CSS)', issuer: 'ASAE LLP', year: '2026', file: '/certificates/ASAE_certificate.jpeg' },
   { name: 'Technology Job Simulation', issuer: 'Forage-Deloitte', year: '2026', file: '/certificates/certificate.pdf' },
   { name: 'Fundamentals of Object Oriented Programming', issuer: 'NPTEL', year: '2025', file: '/certificates/nptel_certificate.pdf' },
@@ -64,6 +65,15 @@ const notes = [
     date: 'Automobile System',
   },
 ]
+
+const connectPoints = [
+  { label: 'Email', hint: 'shraddhaacharya11@gmail.com', href: 'mailto:shraddhaacharya11@gmail.com', icon: '✉', x: 20, y: 20 },
+  { label: 'LinkedIn', hint: 'Connect with me', href: 'https://www.linkedin.com/in/shradha-acharya-049982391/', icon: 'in', x: 80, y: 24, external: true },
+  { label: 'GitHub', hint: 'View my repositories', href: 'https://github.com/shraddhaacharya11o4-rgb', icon: '</>', x: 22, y: 80, external: true },
+  { label: 'Resume', hint: 'View my resume', href: '/resume.pdf', icon: 'CV', x: 80, y: 78, external: true },
+]
+const connectStars = [[8, 50], [92, 48], [50, 6], [50, 94], [35, 10], [66, 92], [12, 12], [90, 90]]
+const connectRing = [[0, 1], [1, 3], [3, 2], [2, 0]] // faint lines between neighbouring points
 
 const reducedMotion = () =>
   typeof window !== 'undefined' && window.matchMedia('(prefers-reduced-motion: reduce)').matches
@@ -684,29 +694,64 @@ function App() {
         </section>
 
         <section id="contact" className="section">
-          <div className="container">
-            <div className="contact-box reveal">
-              <div>
-                <h2>Let's connect.</h2>
-                <p>
-                  I'm open to internships, meaningful projects and conversations about
-                  software development.
-                </p>
-              </div>
-              <div className="contact-links">
-                <a href="mailto:shraddhaacharya11@gmail.com">
-                  <span>Email</span><strong>shraddhaacharya11@gmail.com ↗</strong>
-                </a>
-                <a href="https://www.linkedin.com/in/shradha-acharya-049982391/" target="_blank" rel="noreferrer">
-                  <span>LinkedIn</span><strong>Connect with me ↗</strong>
-                </a>
-                <a href="https://github.com/shraddhaacharya11o4-rgb" target="_blank" rel="noreferrer">
-                  <span>GitHub</span><strong>View my repositories ↗</strong>
-                </a>
-              </div>
-            </div>
-          </div>
-        </section>
+  <div className="container">
+    <div className="contact-box reveal">
+      <div className="contact-intro">
+        <h2>Let's connect.</h2>
+        <p>
+          I'm open to internships, meaningful projects and conversations about
+          software development.
+        </p>
+        <p className="connect-hint">Tap any glowing point to jump straight there →</p>
+      </div>
+
+      <div className="connect-stage">
+        <svg className="connect-svg" viewBox="0 0 100 100" aria-hidden="true">
+          {connectStars.map(([x, y], i) => (
+            <circle key={i} className="connect-star" cx={x} cy={y} r="0.6" style={{ animationDelay: `${i * 0.4}s` }} />
+          ))}
+          {connectRing.map(([a, b], i) => (
+            <line
+              key={i}
+              className="connect-line faint"
+              x1={connectPoints[a].x} y1={connectPoints[a].y}
+              x2={connectPoints[b].x} y2={connectPoints[b].y}
+            />
+          ))}
+          {connectPoints.map((p, i) => (
+            <g key={p.label}>
+              <line className="connect-line" x1="50" y1="50" x2={p.x} y2={p.y} />
+              <circle className="connect-packet" r="1.1">
+                <animateMotion dur={`${3 + i * 0.7}s`} repeatCount="indefinite" path={`M50,50 L${p.x},${p.y}`} />
+              </circle>
+            </g>
+          ))}
+        </svg>
+
+        <div className="connect-hub">
+          <img src="/profile.jpeg" alt="Shradha Acharya" />
+        </div>
+
+        {connectPoints.map((p, i) => (
+          <a
+            key={p.label}
+            className="connect-node"
+            href={p.href}
+            {...(p.external ? { target: '_blank', rel: 'noreferrer' } : {})}
+            style={{ left: `${p.x}%`, top: `${p.y}%` }}
+            aria-label={`${p.label} — ${p.hint}`}
+          >
+            <span className="connect-node-inner" style={{ '--d': `${i * 0.6}s` }}>
+              <span className="connect-tip">{p.hint}</span>
+              <span className="connect-dot">{p.icon}</span>
+              <span className="connect-label">{p.label}</span>
+            </span>
+          </a>
+        ))}
+      </div>
+    </div>
+  </div>
+</section>
       </main>
 
       <footer className="footer">© 2026 Shradha Acharya</footer>
